@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Oregon Trail II Bingo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png">
+    <link rel="manifest" href="assets/favicon/site.webmanifest">
+    <link rel="shortcut icon" href="assets/favicon/favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app" aria-labelledby="page-title">
+      <section class="board-panel">
+        <header class="page-header">
+          <div class="title-row">
+            <h1 id="page-title">Oregon Trail II Bingo</h1>
+            <img class="title-logo" src="assets/img/oregon-trail-logo.png" alt="Oregon Trail wagon">
+          </div>
+        </header>
+
+        <section class="controls-card">
+          <div class="controls-card-header">
+            <h2>Board Controls</h2>
+            <button id="toggle-controls" class="controls-toggle" type="button" aria-expanded="true" aria-controls="controls-panel" aria-label="Collapse controls">
+              <span class="accordion-icon" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <div id="controls-panel" class="controls-panel">
+            <div class="actions" aria-label="Board actions">
+              <button id="random-seed" type="button">Random Seed</button>
+              <button id="new-board" type="button">Build Board</button>
+              <button id="open-trail-randomizer" type="button">Trail Setup</button>
+            </div>
+
+            <form id="settings" class="controls" aria-label="Board settings">
+              <label>
+                <span>Seed</span>
+                <input id="seed" type="text" autocomplete="off">
+              </label>
+
+              <label>
+                <span>Max difficulty</span>
+                <input id="max-difficulty" type="number" min="1" max="25" value="25">
+              </label>
+
+              <label>
+                <span>Pseudo magic square</span>
+                <select id="magic-square"></select>
+              </label>
+            </form>
+          </div>
+        </section>
+
+        <hr>
+        <div class="board-scroll">
+          <section id="board" class="bingo-board" aria-label="Bingo board"></section>
+        </div>
+        <div class="board-actions">
+          <button id="clear-marks" type="button">Clear Board</button>
+        </div>
+      </section>
+    </main>
+
+    <div id="trail-randomizer-modal" class="modal-backdrop" hidden>
+      <section class="trail-modal" role="dialog" aria-modal="true" aria-labelledby="trail-randomizer-title">
+        <div class="modal-header">
+          <h2 id="trail-randomizer-title">Trail Setup</h2>
+          <button id="close-trail-randomizer" class="modal-close" type="button" aria-label="Close trail setup">X</button>
+        </div>
+
+        <div id="trail-randomizer-results" class="trail-results" aria-live="polite"></div>
+
+        <div class="modal-actions">
+          <button id="reroll-trail-randomizer" type="button">Randomize Setup</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
