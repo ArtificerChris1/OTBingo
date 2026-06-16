@@ -285,6 +285,32 @@ function shuffle(items, random) {
   return shuffled;
 }
 
+function transformGrid(values, rotation, flipH, flipV) {
+  let grid = [];
+  for (let i = 0; i < boardSize; i += 1) {
+    grid.push(values.slice(i * boardSize, i * boardSize + boardSize));
+  }
+
+  if (flipH) {
+    grid = grid.map((row) => [...row].reverse());
+  }
+  if (flipV) {
+    grid = [...grid].reverse();
+  }
+
+  for (let r = 0; r < rotation; r += 1) {
+    const newGrid = Array.from({ length: boardSize }, () => new Array(boardSize));
+    for (let i = 0; i < boardSize; i += 1) {
+      for (let j = 0; j < boardSize; j += 1) {
+        newGrid[j][boardSize - 1 - i] = grid[i][j];
+      }
+    }
+    grid = newGrid;
+  }
+
+  return grid.flat();
+}
+
 function chooseRandom(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
@@ -415,7 +441,13 @@ function createBoard() {
 
   const random = createRandom(`${seed}|${maxDifficulty}|${magicSquareSelect.value}`);
   const magicSquare = getSelectedMagicSquare(seed);
-  const difficulties = scaleMagicValues(magicSquare.values, maxDifficulty);
+
+  const rotation = Math.floor(random() * 4);
+  const flipH = random() < 0.5;
+  const flipV = random() < 0.5;
+  const transformedValues = transformGrid(magicSquare.values, rotation, flipH, flipV);
+
+  const difficulties = scaleMagicValues(transformedValues, maxDifficulty);
   const availableGoals = shuffle(goalPool.filter((goal) => goal.difficulty <= maxDifficulty), random);
 
   if (availableGoals.length < squareCount) {
