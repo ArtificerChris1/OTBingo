@@ -190,6 +190,7 @@ const trailRandomizerResults = document.querySelector("#trail-randomizer-results
 
 const boardSize = 5;
 const squareCount = boardSize * boardSize;
+const savedBoardStateKey = "oregonTrailBingo.boardState.v1";
 const konamiKeyboardCodes = [
   ["up", "up", "down", "down", "left", "right", "left", "right", "b", "a"]
 ];
@@ -205,6 +206,29 @@ let hadWinningLine = false;
 let keyboardProgress = [];
 let touchProgress = [];
 let touchStart = null;
+
+function readSavedBoardState() {
+  try {
+    const storedState = window.localStorage.getItem(savedBoardStateKey);
+    return storedState ? JSON.parse(storedState) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeSavedBoardState() {
+  try {
+    window.localStorage.setItem(savedBoardStateKey, JSON.stringify({
+      seed: seedInput.value.trim(),
+      maxDifficulty: getMaxDifficulty(),
+      magicSquare: magicSquareSelect.value,
+      markedSquares: [...markedSquares].sort((first, second) => first - second),
+      updatedAt: Date.now()
+    }));
+  } catch (error) {
+    // Some OBS/browser-source configurations can block storage. The board still works without persistence.
+  }
+}
 
 function syncRenderScale() {
   const deviceScale = window.devicePixelRatio || 1;
@@ -405,6 +429,10 @@ function getSelectedMagicSquare(seed) {
   return pseudoMagicSquares[hashSeed(seed) % pseudoMagicSquares.length] || pseudoMagicSquares[0];
 }
 
+function isValidMagicSquareId(value) {
+  return pseudoMagicSquares.some((square) => square.id === value);
+}
+
 function getHighestGoalDifficulty() {
   return Math.max(...goalPool.map((goal) => goal.difficulty));
 }
@@ -423,12 +451,115 @@ function syncDifficultyInputLimits() {
   maxDifficultyInput.max = String(getHighestGoalDifficulty());
 }
 
-function getMaxDifficulty() {
+function clampMaxDifficulty(value) {
   const lowestPlayableDifficulty = getLowestPlayableDifficulty();
   const highestGoalDifficulty = getHighestGoalDifficulty();
-  const requestedDifficulty = Number(maxDifficultyInput.value);
-  const maxDifficulty = Number.isFinite(requestedDifficulty) ? requestedDifficulty : highestGoalDifficulty;
+  const requestedDifficulty = Number(value);
+  const maxDifficulty = Number.isFinite(requestedDifficulty) ? requestedDifficulty : lowestPlayableDifficulty;
   return Math.max(lowestPlayableDifficulty, Math.min(highestGoalDifficulty, Math.floor(maxDifficulty)));
+}
+
+function getMaxDifficulty() {
+  return clampMaxDifficulty(maxDifficultyInput.value);
+}
+
+function normalizeMarkedSquares(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const indexes = value
+    .map((index) => Number(index))
+    .filter((index) => Number.isInteger(index) && index >= 0 && index < squareCount);
+
+  return [...new Set(indexes)];
+}
+
+function getDefaultBoardSettings() {
+  return {
+    seed: randomSeed(),
+    maxDifficulty: maxDifficultyInput.value,
+    magicSquare: magicSquareSelect.value || pseudoMagicSquares[0].id
+  };
+}
+
+function normalizeBoardSettings(settings, fallback) {
+  const seed = typeof settings?.seed === "string" ? settings.seed.trim() : "";
+  const magicSquare = typeof settings?.magicSquare === "string" ? settings.magicSquare : "";
+
+  return {
+    seed: seed || fallback.seed,
+    maxDifficulty: clampMaxDifficulty(settings?.maxDifficulty ?? fallback.maxDifficulty),
+    magicSquare: isValidMagicSquareId(magicSquare) ? magicSquare : fallback.magicSquare
+  };
+}
+
+function boardSettingsMatch(firstSettings, secondSettings) {
+  return firstSettings.seed === secondSettings.seed
+    && Number(firstSettings.maxDifficulty) === Number(secondSettings.maxDifficulty)
+    && firstSettings.magicSquare === secondSettings.magicSquare;
+}
+
+function getUrlBoardSettings() {
+  const params = new URLSearchParams(window.location.search);
+  const hasBoardParam = params.has("seed")
+    || params.has("maxDifficulty")
+    || params.has("difficulty")
+    || params.has("magicSquare")
+    || params.has("magic");
+
+  if (!hasBoardParam) {
+    return null;
+  }
+
+  return {
+    seed: params.get("seed") || "",
+    maxDifficulty: params.get("maxDifficulty") || params.get("difficulty") || undefined,
+    magicSquare: params.get("magicSquare") || params.get("magic") || ""
+  };
+}
+
+function applyBoardSettings(settings) {
+  seedInput.value = settings.seed;
+  maxDifficultyInput.value = String(settings.maxDifficulty);
+  magicSquareSelect.value = settings.magicSquare;
+}
+
+function syncBoardSettingsToUrl() {
+  if (!window.history?.replaceState) {
+    return;
+  }
+
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set("seed", seedInput.value.trim());
+    url.searchParams.set("maxDifficulty", maxDifficultyInput.value);
+    url.searchParams.set("magicSquare", magicSquareSelect.value);
+    url.searchParams.delete("difficulty");
+    url.searchParams.delete("magic");
+    window.history.replaceState(null, "", url);
+  } catch (error) {
+    // URL syncing is a convenience for sharing/reloading; storage remains the source of truth in OBS.
+  }
+}
+
+function initializeBoardSettings() {
+  const defaultSettings = getDefaultBoardSettings();
+  const savedState = readSavedBoardState();
+  const savedSettings = savedState
+    ? normalizeBoardSettings(savedState, defaultSettings)
+    : null;
+  const urlSettings = getUrlBoardSettings();
+  const initialSettings = urlSettings
+    ? normalizeBoardSettings(urlSettings, defaultSettings)
+    : savedSettings || defaultSettings;
+  const hasSavedSeed = typeof savedState?.seed === "string" && savedState.seed.trim() !== "";
+  const restoredMarkedSquares = hasSavedSeed && savedSettings && boardSettingsMatch(savedSettings, initialSettings)
+    ? normalizeMarkedSquares(savedState.markedSquares)
+    : [];
+
+  applyBoardSettings(initialSettings);
+  createBoard({ restoreMarks: restoredMarkedSquares });
 }
 
 function scaleMagicValues(values, maxDifficulty) {
@@ -451,7 +582,10 @@ function chooseGoalForDifficulty(availableGoals, targetDifficulty, random) {
   return chosenGoal;
 }
 
-function createBoard() {
+function createBoard(options = {}) {
+  const restoredMarkedSquares = Array.isArray(options.restoreMarks)
+    ? options.restoreMarks
+    : [];
   const seed = seedInput.value.trim() || randomSeed();
   seedInput.value = seed;
 
@@ -476,9 +610,12 @@ function createBoard() {
   }
 
   currentGoals = difficulties.map((difficulty) => chooseGoalForDifficulty(availableGoals, difficulty, random));
-  markedSquares = new Set();
-  hadWinningLine = false;
+  markedSquares = new Set(normalizeMarkedSquares(restoredMarkedSquares));
+  hadWinningLine = getWinningIndexes().size > 0;
   renderBoard();
+  updateBoardState();
+  syncBoardSettingsToUrl();
+  writeSavedBoardState();
 }
 
 function renderBoard() {
@@ -516,6 +653,7 @@ function toggleSquare(index) {
 
   updateBoardState();
   updateWinEffects();
+  writeSavedBoardState();
 }
 
 function updateBoardState() {
@@ -585,6 +723,7 @@ function clearMarks() {
   markedSquares = new Set();
   hadWinningLine = false;
   updateBoardState();
+  writeSavedBoardState();
 }
 
 function trackCodeInput(input, sequences, progress) {
@@ -660,13 +799,26 @@ function getTouchDirection(start, end) {
   return deltaY > 0 ? "down" : "up";
 }
 
+function confirmBoardAction(message) {
+  return window.confirm(message);
+}
+
 randomSeedButton.addEventListener("click", () => {
+  if (!confirmBoardAction("Random Seed will replace the current board and clear all marks. Continue?")) {
+    return;
+  }
+
   seedInput.value = randomSeed();
   createBoard();
 });
 
 settingsForm.addEventListener("submit", (event) => {
   event.preventDefault();
+
+  if (!confirmBoardAction("Build Board will replace the current board and clear all marks. Continue?")) {
+    return;
+  }
+
   createBoard();
 });
 
@@ -677,8 +829,20 @@ toggleControlsButton.addEventListener("click", () => {
   toggleControlsButton.setAttribute("aria-label", shouldCollapse ? "Expand controls" : "Collapse controls");
 });
 
-newBoardButton.addEventListener("click", createBoard);
-clearMarksButton.addEventListener("click", clearMarks);
+newBoardButton.addEventListener("click", () => {
+  if (!confirmBoardAction("Build Board will replace the current board and clear all marks. Continue?")) {
+    return;
+  }
+
+  createBoard();
+});
+clearMarksButton.addEventListener("click", () => {
+  if (!confirmBoardAction("Clear Board will remove all marks from the current board. Continue?")) {
+    return;
+  }
+
+  clearMarks();
+});
 openTrailRandomizerButton.addEventListener("click", openTrailRandomizer);
 closeTrailRandomizerButton.addEventListener("click", closeTrailRandomizer);
 rerollTrailRandomizerButton.addEventListener("click", randomizeTrailSetup);
@@ -747,5 +911,4 @@ window.addEventListener("touchend", (event) => {
 
 populateMagicSquareSelect();
 syncDifficultyInputLimits();
-seedInput.value = randomSeed();
-createBoard();
+initializeBoardSettings();
