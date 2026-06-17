@@ -784,13 +784,26 @@ function getTouchDirection(start, end) {
   return deltaY > 0 ? "down" : "up";
 }
 
+function confirmBoardAction(message) {
+  return window.confirm(message);
+}
+
 randomSeedButton.addEventListener("click", () => {
+  if (!confirmBoardAction("Random Seed will replace the current board and clear all marks. Continue?")) {
+    return;
+  }
+
   seedInput.value = randomSeed();
   createBoard();
 });
 
 settingsForm.addEventListener("submit", (event) => {
   event.preventDefault();
+
+  if (!confirmBoardAction("Build Board will replace the current board and clear all marks. Continue?")) {
+    return;
+  }
+
   createBoard();
 });
 
@@ -801,8 +814,20 @@ toggleControlsButton.addEventListener("click", () => {
   toggleControlsButton.setAttribute("aria-label", shouldCollapse ? "Expand controls" : "Collapse controls");
 });
 
-newBoardButton.addEventListener("click", createBoard);
-clearMarksButton.addEventListener("click", clearMarks);
+newBoardButton.addEventListener("click", () => {
+  if (!confirmBoardAction("Build Board will replace the current board and clear all marks. Continue?")) {
+    return;
+  }
+
+  createBoard();
+});
+clearMarksButton.addEventListener("click", () => {
+  if (!confirmBoardAction("Clear Board will remove all marks from the current board. Continue?")) {
+    return;
+  }
+
+  clearMarks();
+});
 openTrailRandomizerButton.addEventListener("click", openTrailRandomizer);
 closeTrailRandomizerButton.addEventListener("click", closeTrailRandomizer);
 rerollTrailRandomizerButton.addEventListener("click", randomizeTrailSetup);
