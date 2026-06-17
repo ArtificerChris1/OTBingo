@@ -74,7 +74,7 @@ const goalPool = [
   { text: "Hunt for 200 pounds of meat with only one shot", difficulty: 16 },
   { text: "Repair two broken wagon components", difficulty: 17 },
   { text: "Reach a destination before winter", difficulty: 17 },
-  { text: "Find fresh water", difficulty: 18 },
+  { text: "Find fresh water after party goes thirsty", difficulty: 18 },
   { text: "Complete a pistol only run", difficulty: 18 },
   { text: "Reach your destination with at most one other party member", difficulty: 19 },
   { text: "Do a full run using Mules", difficulty: 19 },
