@@ -4,7 +4,7 @@ const goalPool = [
   { text: "Arrive at a settlement", difficulty: 1 },
   { text: "Complete a river crossing", difficulty: 1 },
   { text: "Trade with another wagon", difficulty: 1 },
-  { text: "Buy a replacement oxen", difficulty: 1 },
+  { text: "Buy a replacement ox", difficulty: 1 },
   { text: "Cross a mountain pass", difficulty: 2 },
   { text: "Successfully ford a river", difficulty: 2 },
   { text: "Lose supplies", difficulty: 2 },
@@ -35,7 +35,7 @@ const goalPool = [
   { text: "Break a wagon tongue", difficulty: 5 },
   { text: "Hunt at least 2 animals without missing shots", difficulty: 6 },
   { text: "Trade at a trading post", difficulty: 6 },
-  { text: "Party mermber survives Cholera", difficulty: 7 },
+  { text: "Party member survives Cholera", difficulty: 7 },
   { text: "Have a party member die to Cholera", difficulty: 7 },
   { text: "Cure an illness with medicine", difficulty: 7 },
   { text: "Reach South Pass", difficulty: 7 },
@@ -87,15 +87,15 @@ const goalPool = [
   { text: "Complete a run with a small farmwagon", difficulty: 21 },
   { text: "Finish with two seniors (55+)", difficulty: 22 },
   { text: "Finish the trail with all party members alive", difficulty: 22 },
-  { text: "Keep a parter member younger than 10 alive the whole trip", difficulty: 22 },
+  { text: "Keep a party member younger than 10 alive the whole trip", difficulty: 22 },
   { text: "Complete a run with cinnamon in your inventory the entire time", difficulty: 23 },
-  { text: "Complete a pescitarian run", difficulty: 23 },
+  { text: "Complete a pescatarian run", difficulty: 23 },
   { text: "Get fired and then re-elected from wagon train captain", difficulty: 23 },
   { text: "Complete a run traveling 12h/day the whole time", difficulty: 24 },
   { text: "Complete a run with a milk cow", difficulty: 24 },
   { text: "All party members survive a winter without winter clothes", difficulty: 24 },
   { text: "Finish the trail with no wagon parts breaking", difficulty: 25 },
-  { text: "Get a limb amputated.", difficulty: 25 },
+  { text: "Get a limb amputated", difficulty: 25 },
   { text: "Complete a run with a Conestoga Wagon", difficulty: 25 }
 ];
 
@@ -405,11 +405,30 @@ function getSelectedMagicSquare(seed) {
   return pseudoMagicSquares[hashSeed(seed) % pseudoMagicSquares.length] || pseudoMagicSquares[0];
 }
 
+function getHighestGoalDifficulty() {
+  return Math.max(...goalPool.map((goal) => goal.difficulty));
+}
+
+function getLowestPlayableDifficulty() {
+  const difficulties = [...new Set(goalPool.map((goal) => goal.difficulty))]
+    .sort((first, second) => first - second);
+
+  return difficulties.find((difficulty) => {
+    return goalPool.filter((goal) => goal.difficulty <= difficulty).length >= squareCount;
+  }) || getHighestGoalDifficulty();
+}
+
+function syncDifficultyInputLimits() {
+  maxDifficultyInput.min = String(getLowestPlayableDifficulty());
+  maxDifficultyInput.max = String(getHighestGoalDifficulty());
+}
+
 function getMaxDifficulty() {
-  const highestGoalDifficulty = Math.max(...goalPool.map((goal) => goal.difficulty));
+  const lowestPlayableDifficulty = getLowestPlayableDifficulty();
+  const highestGoalDifficulty = getHighestGoalDifficulty();
   const requestedDifficulty = Number(maxDifficultyInput.value);
-  const maxDifficulty = Number.isFinite(requestedDifficulty) ? requestedDifficulty : 1;
-  return Math.max(1, Math.min(highestGoalDifficulty, Math.floor(maxDifficulty)));
+  const maxDifficulty = Number.isFinite(requestedDifficulty) ? requestedDifficulty : highestGoalDifficulty;
+  return Math.max(lowestPlayableDifficulty, Math.min(highestGoalDifficulty, Math.floor(maxDifficulty)));
 }
 
 function scaleMagicValues(values, maxDifficulty) {
@@ -727,5 +746,6 @@ window.addEventListener("touchend", (event) => {
 }, { passive: true });
 
 populateMagicSquareSelect();
+syncDifficultyInputLimits();
 seedInput.value = randomSeed();
 createBoard();
