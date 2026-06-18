@@ -251,7 +251,7 @@ h2 {
 .controls label {
   display: grid;
   gap: 6px;
-  color: var(--muted);
+  color: var(--ink);
   font-size: 0.86rem;
   font-weight: 700;
   text-transform: uppercase;
