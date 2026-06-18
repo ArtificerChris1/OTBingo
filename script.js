@@ -621,27 +621,45 @@ function createBoard(options = {}) {
 function renderBoard() {
   boardElement.innerHTML = "";
 
-  currentGoals.forEach((goal, index) => {
-    const square = document.createElement("button");
-    square.className = "square";
-    square.type = "button";
-    square.dataset.index = index;
-    square.setAttribute("aria-pressed", "false");
-    square.setAttribute("aria-label", `${goal.text}, difficulty ${goal.difficulty}`);
+  for (let row = 0; row < boardSize; row += 1) {
+    const rowElement = document.createElement("div");
+    rowElement.className = "bingo-row";
+    rowElement.setAttribute("role", "row");
+    rowElement.setAttribute("aria-rowindex", String(row + 1));
 
-    const goalText = document.createElement("span");
-    goalText.className = "goal-text";
-    if (goal.text.length > 45) {
-      goalText.classList.add("goal-text--dense");
-    } else if (goal.text.length > 32) {
-      goalText.classList.add("goal-text--compact");
+    for (let column = 0; column < boardSize; column += 1) {
+      const index = row * boardSize + column;
+      const goal = currentGoals[index];
+      const cell = document.createElement("div");
+      cell.className = "bingo-cell";
+      cell.setAttribute("role", "gridcell");
+      cell.setAttribute("aria-colindex", String(column + 1));
+      cell.setAttribute("aria-selected", "false");
+
+      const square = document.createElement("button");
+      square.className = "square";
+      square.type = "button";
+      square.dataset.index = index;
+      square.setAttribute("aria-pressed", "false");
+      square.setAttribute("aria-label", `Row ${row + 1}, column ${column + 1}: ${goal.text}, difficulty ${goal.difficulty}`);
+
+      const goalText = document.createElement("span");
+      goalText.className = "goal-text";
+      if (goal.text.length > 45) {
+        goalText.classList.add("goal-text--dense");
+      } else if (goal.text.length > 32) {
+        goalText.classList.add("goal-text--compact");
+      }
+      goalText.textContent = goal.text;
+
+      square.append(goalText);
+      square.addEventListener("click", () => toggleSquare(index));
+      cell.append(square);
+      rowElement.append(cell);
     }
-    goalText.textContent = goal.text;
 
-    square.append(goalText);
-    square.addEventListener("click", () => toggleSquare(index));
-    boardElement.append(square);
-  });
+    boardElement.append(rowElement);
+  }
 }
 
 function toggleSquare(index) {
@@ -667,6 +685,7 @@ function updateBoardState() {
     square.classList.toggle("marked", isMarked);
     square.classList.toggle("winning", isWinning);
     square.setAttribute("aria-pressed", String(isMarked));
+    square.closest(".bingo-cell")?.setAttribute("aria-selected", String(isMarked));
   });
 }
 
@@ -767,19 +786,6 @@ function spinBoard() {
   boardElement.classList.remove("spin");
   void boardElement.offsetWidth;
   boardElement.classList.add("spin");
-
-  if (boardElement.animate) {
-    boardElement.animate(
-      [
-        { transform: "rotate(0deg)" },
-        { transform: "rotate(360deg)" }
-      ],
-      {
-        duration: 900,
-        easing: "ease-in-out"
-      }
-    );
-  }
 }
 
 function getTouchDirection(start, end) {
